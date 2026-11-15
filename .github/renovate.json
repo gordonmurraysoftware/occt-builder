@@ -1,6 +1,15 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "extends": ["config:best-practices"],
+  "timezone": "Europe/London",
+  "schedule": ["* 0-3 * * 1"],
+  "minimumReleaseAge": "7 days",
+  "minimumReleaseAgeBehaviour": "timestamp-required",
+  "internalChecksFilter": "strict",
+  "vulnerabilityAlerts": {
+    "minimumReleaseAge": null,
+    "schedule": ["at any time"]
+  },
   "customManagers": [
     {
       "customType": "regex",
@@ -12,17 +21,30 @@
   ],
   "packageRules": [
     {
-      "description": "Debian digest refreshes are security patches under the same tag.",
+      "description": "GitHub tags wait three days, shorter than the seven-day default.",
+      "matchDatasources": ["github-tags"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Actions wait three days, shorter than the seven-day default.",
+      "matchManagers": ["github-actions"],
+      "minimumReleaseAge": "3 days"
+    },
+    {
+      "description": "Debian digest refreshes are security patches under the same tag. Zero age matches null since Renovate 42.19.5; the Monday window is the security path.",
       "matchDatasources": ["docker"],
       "matchDepNames": ["debian"],
       "matchUpdateTypes": ["digest"],
+      "groupName": "weekly digest and action updates",
       "automerge": true,
-      "platformAutomerge": true
+      "platformAutomerge": true,
+      "minimumReleaseAge": "0 days"
     },
     {
       "description": "Action digest, minor, and patch updates once checks pass.",
       "matchManagers": ["github-actions"],
       "matchUpdateTypes": ["digest", "minor", "patch"],
+      "groupName": "weekly digest and action updates",
       "automerge": true,
       "platformAutomerge": true
     },
