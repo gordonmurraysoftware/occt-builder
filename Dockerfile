@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 # Builder image: toolchain plus static OCCT and meshoptimizer. Nothing here is a runtime base.
 # Tag contract: <occt>-meshopt<mo>-<debian>. Under one tag only Debian packages move.
 FROM debian:trixie-slim@sha256:a72b4433de1cf7d6bae0c4cee74d0547f58601a643b3375f070c51600d63b6b2
