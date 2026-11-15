@@ -1,0 +1,35 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:best-practices"],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "managerFilePatterns": ["/^Dockerfile$/"],
+      "matchStrings": [
+        "# renovate: datasource=(?<datasource>\\S+) depName=(?<depName>\\S+) versioning=(?<versioning>\\S+)\\nARG \\w+_TAG=(?<currentValue>\\S+)\\nARG \\w+_COMMIT=(?<currentDigest>[0-9a-f]{40})"
+      ]
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "Debian digest refreshes are security patches under the same tag.",
+      "matchDatasources": ["docker"],
+      "matchDepNames": ["debian"],
+      "matchUpdateTypes": ["digest"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+    {
+      "description": "Action digest, minor, and patch updates once checks pass.",
+      "matchManagers": ["github-actions"],
+      "matchUpdateTypes": ["digest", "minor", "patch"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+    {
+      "description": "OCCT and meshoptimizer bumps change converter output. Open only from the dashboard.",
+      "matchDepNames": ["Open-Cascade-SAS/OCCT", "zeux/meshoptimizer"],
+      "dependencyDashboardApproval": true
+    }
+  ]
+}

@@ -1,0 +1,90 @@
+name: build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 4 * * 1"
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  tag:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Derive image tag
+        id: tag
+        run: |
+          set -eu
+          occt=$(sed -n 's/^ARG OCCT_TAG=\(.*\)/\1/p' Dockerfile)
+          mo=$(sed -n 's/^ARG MESHOPT_TAG=\(.*\)/\1/p' Dockerfile)
+          debian=$(sed -n 's/^FROM debian:\([a-z]*\).*/\1/p' Dockerfile)
+          occt=${occt#V}
+          occt=${occt//_/.}
+          mo=${mo#v}
+          tag="${occt}-meshopt${mo}-${debian}"
+          echo "tag=${tag}" >> "$GITHUB_OUTPUT"
+          echo "${tag}"
+
+  build:
+    needs: tag
+    uses: docker/github-builder/.github/workflows/build.yml@a31d2311da4d55e21b978c1c52bab82ba97d51ee # v1.19.0
+    permissions:
+      contents: read
+      id-token: write
+      packages: write
+    with:
+      output: image
+      push: ${{ github.event_name != 'pull_request' }}
+      platforms: linux/amd64,linux/arm64
+      sbom: true
+      meta-images: ghcr.io/gordonmurraysoftware/occt-builder
+      meta-tags: type=raw,value=${{ needs.tag.outputs.tag }}
+      set-meta-annotations: true
+      meta-annotations: |
+        org.opencontainers.image.description=Toolchain and static libraries for building STEP converters (OCCT, meshoptimizer, gltfpack, libwebp).
+        org.opencontainers.image.licenses=LGPL-2.1-only WITH OCCT-exception-1.0 AND MIT AND BSD-3-Clause
+    secrets:
+      registry-auths: |
+        - registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+  scan:
+    if: github.event_name != 'pull_request'
+    needs: [tag, build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+      security-events: write
+    steps:
+      - name: Log in to GHCR
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+      - name: Scan image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/gordonmurraysoftware/occt-builder@${{ needs.build.outputs.digest }}
+          format: sarif
+          output: trivy.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: "true"
+          exit-code: "0"
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@33d7b85da1a04171e211befe2c739303b9a4c066 # v4.39.3
+        with:
+          sarif_file: trivy.sarif
