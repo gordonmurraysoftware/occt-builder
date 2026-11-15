@@ -27,6 +27,12 @@
       "platformAutomerge": true
     },
     {
+      "description": "Runner label bumps once the build is green. The image build already maps arm64 to ubuntu-26.04-arm.",
+      "matchDatasources": ["github-runners"],
+      "automerge": true,
+      "platformAutomerge": true
+    },
+    {
       "description": "OCCT and meshoptimizer bumps change converter output. Open only from the dashboard.",
       "matchDepNames": ["Open-Cascade-SAS/OCCT", "zeux/meshoptimizer"],
       "dependencyDashboardApproval": true
